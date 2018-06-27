@@ -1,78 +1,32 @@
-const mongoose = require('mongoose');
+const express = require('express');
+const bodyParser = require('body-parser');
 
-//set global Promise
-mongoose.Promise = global.Promise;
-mongoose.connect('mongodb://localhost:27017/todoApp');
+const { mongoose } = require('./db/mongoose.js');
+const { Todo } = require('./models/todo.js');
+const { UserModel } = require('./models/user.js');
 
-//create db model
-//mongoose return js object with constructor which we can call by 'new'
-const Todo = mongoose.model('Todo', {
-    text: {
-        type: String,
-        required: true,
-        minlength: 1,
-        trim: true
-    },
-    completed: {
-        type: Boolean,
-        default: false
-    },
-    completedAt: {
-        type: Number,
-        default: null
-    }
-});
+const app = express();
+const port = process.env.PORT || 3000;
 
-//db model for user
-const UserModel = mongoose.model('User', {
-    user: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    email: {
-        type: String,
-        required: true,
-        trim: true,
-        minlength: 1
-    },
-    age: {
-        type: Number
-    }
-});
+//handling middleware (parsing post body got from client)
+app.use(bodyParser.json());
 
-const addTodo = function(doc) {
-    const todo = new Todo(doc);
+app.post('/todos', (req, res) => {
+    console.log(req.body);
+    const todo = new Todo({
+        text: req.body.text
+    });
     todo.save().then(
-        () => {
-            console.log(`Saved todo`, todo);
+        doc => {
+            res.send(doc);
         },
         err => {
-            console.log(`Unable to save todo: ${err}`);
+            res.status(400).send(err);
         }
     );
-};
-
-const addUser = function(doc) {
-    const user = new UserModel(doc);
-    user.save().then(
-        () => {
-            console.log(`Saved user`, user);
-        },
-        err => {
-            console.log(`Unable to save user: ${err}`);
-        }
-    );
-};
-
-addUser({
-    user: 'Krzysztof',
-    email: 'test@test.pl ',
-    age: 33
 });
 
-// addTodo({
-//     text: '   Watching football games today   ',
-//     completed: true,
-//     completedAt: 15323574
-// });
+//listen to the requests
+app.listen(port, () => {
+    console.info(`Server is on port ${port}`);
+});
