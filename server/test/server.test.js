@@ -5,10 +5,22 @@ const { app } = require('./../server');
 const { Todo } = require('./../models/todo.js');
 //const { UserModel } = require('./models/user.js');
 
+const todos = [
+    {
+        text: 'Some todo 1'
+    },
+    {
+        text: 'Some todo 2'
+    }
+];
+
 describe('POST/todos', () => {
     //preparation before running test. clearing database, so that assertion that after adding one document number of docs in db will be exactly 1.
     beforeEach(done => {
-        Todo.remove({}).then(() => done());
+        Todo.remove({}).then(() => {
+            Todo.insertMany(todos);
+            return done();
+        });
     });
     //since POST is a async action done argument is provided to make test assertion after request has been resolved
     it('should create new todo', done => {
@@ -26,7 +38,7 @@ describe('POST/todos', () => {
                     return done(err);
                 }
 
-                Todo.find()
+                Todo.find({ text })
                     .then(todos => {
                         expect(todos.length).toBe(1);
                         expect(todos[0].text).toBe(text);
@@ -48,10 +60,22 @@ describe('POST/todos', () => {
 
                 Todo.find()
                     .then(todos => {
-                        expect(todos.length).toBe(0);
+                        expect(todos.length).toBe(2);
                         done();
                     })
                     .catch(err => done(err));
             });
+    });
+});
+
+describe('GET/todos', () => {
+    it('should get all todos', done => {
+        request(app)
+            .get('/todos')
+            .expect(200)
+            .expect(res => {
+                expect(res.body.todos.length).toBe(2);
+            })
+            .end(done);
     });
 });
