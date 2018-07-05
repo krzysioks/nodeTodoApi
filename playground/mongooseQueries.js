@@ -22,6 +22,23 @@ const findById = function(id, collection) {
         .catch(err => console.log('Error: ', err));
 };
 
+const isValidId = function(id) {
+    return ObjectID.isValid(id);
+};
+
+const findTodoById = function(id) {
+    return Todo.findById(id)
+        .then(todo => {
+            if (!todo) {
+                return { errCode: 404 };
+            }
+            return todo;
+        })
+        .catch(() => {
+            errCode: 400;
+        });
+};
+
 const id = {
     describe: 'id of the document',
     demand: true,
@@ -81,3 +98,7 @@ if (command === 'findById') {
 //         console.log('TodoById: ', todo);
 //     })
 //     .catch(err => console.log('Error: ', err));
+module.exports = {
+    isValidId,
+    findTodoById
+};
