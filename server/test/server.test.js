@@ -1,5 +1,6 @@
 const expect = require('expect');
 const request = require('supertest');
+const { ObjectID } = require('mongodb');
 
 const { app } = require('./../server');
 const { Todo } = require('./../models/todo.js');
@@ -7,9 +8,11 @@ const { Todo } = require('./../models/todo.js');
 
 const todos = [
     {
+        _id: new ObjectID(),
         text: 'Some todo 1'
     },
     {
+        _id: new ObjectID(),
         text: 'Some todo 2'
     }
 ];
@@ -75,6 +78,44 @@ describe('GET/todos', () => {
             .expect(200)
             .expect(res => {
                 expect(res.body.todos.length).toBe(2);
+            })
+            .end(done);
+    });
+});
+
+describe('GET/todos/:id', () => {
+    it('should return todo doc', done => {
+        request(app)
+            .get(`/todos/${todos[0]._id.toHexString()}`)
+            .expect(200)
+            .expect(res => {
+                expect(res.body.text).toBe(todos[0].text);
+            })
+            .end(done);
+    });
+
+    it('should return 404 if todo doc not found', done => {
+        const fakeId = new ObjectID();
+        request(app)
+            .get(`/todos/${fakeId.toHexString()}`)
+            .expect(404)
+            .expect(res => {
+                if (res.body.errMsg) {
+                    expect(res.body.errMsg).toBe('Document not found');
+                }
+            })
+            .end(done);
+    });
+
+    it('should return 404 if id is not valid id object', done => {
+        const fakeId = 14587;
+        request(app)
+            .get(`/todos/${fakeId}`)
+            .expect(res => {
+                console.info(res.body);
+                if (res.body.errMsg) {
+                    expect(res.body.errMsg).toBe('Provided id is not valid');
+                }
             })
             .end(done);
     });
