@@ -81,7 +81,7 @@ app.delete('/todos/:id', (req, res) => {
                     break;
             }
         } else {
-            res.status(200).send('Successfuly removed doc: ' + todo);
+            res.status(200).send({ todo });
         }
     });
 });

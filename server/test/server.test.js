@@ -112,7 +112,56 @@ describe('GET/todos/:id', () => {
         request(app)
             .get(`/todos/${fakeId}`)
             .expect(res => {
-                console.info(res.body);
+                if (res.body.errMsg) {
+                    expect(res.body.errMsg).toBe('Provided id is not valid');
+                }
+            })
+            .end(done);
+    });
+});
+
+describe('DELETE /todos/:id', () => {
+    it('should remove todo doc', done => {
+        const hexId = todos[0]._id.toHexString();
+
+        request(app)
+            .delete(`/todos/${hexId}`)
+            .expect(200)
+            .expect(res => {
+                expect(res.body.todo._id).toBe(hexId);
+            })
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+
+                Todo.findById(hexId)
+                    .then(todo => {
+                        expect(todo).toBe(null);
+                        done();
+                    })
+                    .catch(err => done(err));
+            });
+    });
+
+    it('should return 404 if todo not found', done => {
+        const fakeId = new ObjectID();
+        request(app)
+            .delete(`/todos/${fakeId.toHexString()}`)
+            .expect(404)
+            .expect(res => {
+                if (res.body.errMsg) {
+                    expect(res.body.errMsg).toBe('Document not found');
+                }
+            })
+            .end(done);
+    });
+
+    it('should return 404 if todo id object is invalid', done => {
+        const fakeId = 14587;
+        request(app)
+            .delete(`/todos/${fakeId}`)
+            .expect(res => {
                 if (res.body.errMsg) {
                     expect(res.body.errMsg).toBe('Provided id is not valid');
                 }
