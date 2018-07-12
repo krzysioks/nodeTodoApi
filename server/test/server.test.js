@@ -9,11 +9,14 @@ const { Todo } = require('./../models/todo.js');
 const todos = [
     {
         _id: new ObjectID(),
-        text: 'Some todo 1'
+        text: 'Some todo 1',
+        completed: false
     },
     {
         _id: new ObjectID(),
-        text: 'Some todo 2'
+        text: 'Some todo 2',
+        completed: true,
+        completedAt: new Date().getTime() - 5000
     }
 ];
 
@@ -167,5 +170,62 @@ describe('DELETE /todos/:id', () => {
                 }
             })
             .end(done);
+    });
+});
+
+describe('PATCH /todos/:id', () => {
+    beforeEach(done => {
+        Todo.remove({}).then(() => {
+            Todo.insertMany(todos);
+            return done();
+        });
+    });
+
+    it('should update todo doc', done => {
+        const hexId = todos[0]._id.toHexString();
+        const body = {
+            text: 'New test text',
+            completed: true
+        };
+
+        request(app)
+            .patch(`/todos/${hexId}`)
+            .send(body)
+            .expect(200)
+            .expect(res => {
+                expect(res.body.todo.text).toBe(body.text);
+                expect(res.body.todo.completed).toBe(body.completed);
+                expect(typeof res.body.todo.completedAt).toBe('number');
+            })
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+                return done();
+            });
+    });
+
+    it('should clear completedAt when todo is not completed', done => {
+        const hexId = todos[1]._id.toHexString();
+        const body = {
+            text: 'Text of updated notCompleted property4',
+            completed: false
+        };
+
+        request(app)
+            .patch(`/todos/${hexId}`)
+            .send(body)
+            .expect(200)
+            .expect(res => {
+                expect(res.body.todo.text).toBe(body.text);
+                expect(res.body.todo.completed).toBe(body.completed);
+                expect(res.body.todo.completedAt).toBe(null);
+            })
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+                return done();
+            });
     });
 });
