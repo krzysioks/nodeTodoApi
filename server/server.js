@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const _ = require('lodash');
 
 const { mongoose } = require('./db/mongoose.js');
 const { Todo } = require('./models/todo.js');
@@ -84,6 +85,36 @@ app.delete('/todos/:id', (req, res) => {
             res.status(200).send({ todo });
         }
     });
+});
+
+//PATCH /todos/123345
+app.patch('/todos/:id', (req, res) => {
+    //pick takes of req.body provided property names if they exist and create key value pair object
+    const body = _.pick(req.body, ['text', 'completed']);
+
+    if (!isValidId(req.params.id)) {
+        res.status(404).send({ errMsg: 'Provided id is not valid' });
+        return;
+    }
+
+    if (_.isBoolean(body.completed) && body.completed) {
+        body.completedAt = new Date().getTime();
+    } else {
+        body.completed = false;
+        body.completedAt = null;
+    }
+
+    Todo.findByIdAndUpdate(req.params.id, { $set: body }, { new: true })
+        .then(todo => {
+            if (!todo) {
+                return res.status(404).send();
+            }
+
+            res.send({ todo });
+        })
+        .catch(err => {
+            res.status(400).send(err);
+        });
 });
 
 //listen to the requests
