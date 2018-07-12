@@ -5,6 +5,7 @@ const { mongoose } = require('./db/mongoose.js');
 const { Todo } = require('./models/todo.js');
 const { UserModel } = require('./models/user.js');
 const { isValidId, findTodoById } = require('./../playground/mongooseQueries.js');
+const { removeTodoById } = require('./../playground/mongooseDelete.js');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -58,6 +59,29 @@ app.get('/todos/:id', (req, res) => {
             }
         } else {
             res.status(200).send(todo);
+        }
+    });
+});
+
+//DELETE /todos/123345
+app.delete('/todos/:id', (req, res) => {
+    if (!isValidId(req.params.id)) {
+        res.status(404).send({ errMsg: 'Provided id is not valid' });
+        return;
+    }
+
+    removeTodoById(req.params.id).then(todo => {
+        if (todo.errCode) {
+            switch (todo.errCode) {
+                case 400:
+                    res.status(400).send({ errMsg: 'Error occured while deleteing doc from database' });
+                    break;
+                case 404:
+                    res.status(404).send({ errMsg: 'Document not found' });
+                    break;
+            }
+        } else {
+            res.status(200).send('Successfuly removed doc: ' + todo);
         }
     });
 });
