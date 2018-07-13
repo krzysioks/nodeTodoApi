@@ -1,3 +1,4 @@
+require('./config/config');
 const express = require('express');
 const bodyParser = require('body-parser');
 const _ = require('lodash');
@@ -9,7 +10,6 @@ const { isValidId, findTodoById } = require('./../playground/mongooseQueries.js'
 const { removeTodoById } = require('./../playground/mongooseDelete.js');
 
 const app = express();
-const port = process.env.PORT || 3000;
 
 // //handling middleware (parsing post body got from client)
 app.use(bodyParser.json());
@@ -118,8 +118,8 @@ app.patch('/todos/:id', (req, res) => {
 });
 
 //listen to the requests
-app.listen(port, () => {
-    console.info(`Server is on port ${port}`);
+app.listen(process.env.PORT, () => {
+    console.info(`Server is on port ${process.env.PORT}`);
 });
 
 module.exports = {
