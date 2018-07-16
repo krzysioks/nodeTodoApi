@@ -117,6 +117,19 @@ app.patch('/todos/:id', (req, res) => {
         });
 });
 
+//POST user
+app.post('/users/create', (req, res) => {
+    //pick takes of req.body provided property names if they exist and create key value pair object
+    const body = _.pick(req.body, ['email', 'password']);
+    const user = new UserModel(body);
+
+    user.save()
+        .then(response => {
+            res.send(response);
+        })
+        .catch(err => res.status(400).send(err));
+});
+
 //listen to the requests
 app.listen(process.env.PORT, () => {
     console.info(`Server is on port ${process.env.PORT}`);
