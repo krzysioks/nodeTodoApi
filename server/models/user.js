@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
     email: {
@@ -65,6 +66,21 @@ UserSchema.statics.findByToken = function(token) {
         'tokens.access': 'auth'
     });
 };
+
+UserSchema.pre('save', function(next) {
+    //check if password has been modified. Only then run middleware code.
+    //we dont want to hash already hashed password
+    if (this.isModified('password')) {
+        bcrypt.genSalt(10, (err, salt) => {
+            bcrypt.hash(this.password, salt, (err, hash) => {
+                this.password = hash;
+                next();
+            });
+        });
+    } else {
+        next();
+    }
+});
 
 //db model for user
 const UserModel = mongoose.model('User', UserSchema);
