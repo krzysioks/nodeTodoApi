@@ -49,6 +49,23 @@ UserSchema.methods.generateAuthToken = function() {
     return this.save().then(() => token);
 };
 
+UserSchema.statics.findByToken = function(token) {
+    let decoded;
+
+    try {
+        decoded = jwt.verify(token, 'salt123');
+    } catch (err) {
+        return Promise.reject();
+    }
+
+    //return user which props match provided ones
+    return this.findOne({
+        _id: decoded._id,
+        'tokens.token': token,
+        'tokens.access': 'auth'
+    });
+};
+
 //db model for user
 const UserModel = mongoose.model('User', UserSchema);
 

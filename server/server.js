@@ -8,6 +8,7 @@ const { Todo } = require('./models/todo.js');
 const { UserModel } = require('./models/user.js');
 const { isValidId, findTodoById } = require('./../playground/mongooseQueries.js');
 const { removeTodoById } = require('./../playground/mongooseDelete.js');
+const { authenticate } = require('./middleware/middleware.js');
 
 const app = express();
 
@@ -117,6 +118,10 @@ app.patch('/todos/:id', (req, res) => {
         });
 });
 
+app.get('/users/me', authenticate, (req, res) => {
+    res.send(req.user);
+});
+
 //POST user
 app.post('/users/create', (req, res) => {
     //pick takes of req.body provided property names if they exist and create key value pair object
@@ -125,6 +130,8 @@ app.post('/users/create', (req, res) => {
 
     user.save()
         .then(response => {
+            //since this is public route (adding user) -> authentication is not necessary.
+            //here creating the auth token for newly added user
             return response.generateAuthToken();
         })
         .then(token => {
