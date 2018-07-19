@@ -2,6 +2,7 @@ require('./config/config');
 const express = require('express');
 const bodyParser = require('body-parser');
 const _ = require('lodash');
+const bcrypt = require('bcryptjs');
 
 const { mongoose } = require('./db/mongoose.js');
 const { Todo } = require('./models/todo.js');
@@ -134,6 +135,20 @@ app.post('/users/create', (req, res) => {
         })
         .then(token => {
             res.header('x-auth', token).send(user);
+        })
+        .catch(err => res.status(400).send(err));
+});
+
+//POST /users/login
+app.post('/users/login', (req, res) => {
+    const body = _.pick(req.body, ['email', 'password']);
+
+    UserModel.findByCredentials(body.email, body.password)
+        .then(user => {
+            return user.generateAuthToken().then(token => {
+                //if user authenticated successfully -> generate token and add to x-auth header props
+                res.header('x-auth', token).send(user);
+            });
         })
         .catch(err => res.status(400).send(err));
 });

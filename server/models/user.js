@@ -67,6 +67,26 @@ UserSchema.statics.findByToken = function(token) {
     });
 };
 
+UserSchema.statics.findByCredentials = function(email, password) {
+    return this.findOne({ email })
+        .then(user => {
+            if (!user) {
+                return Promise.reject({ error: 'User not found' });
+            }
+
+            return new Promise((resolve, reject) => {
+                bcrypt.compare(password, user.password, (err, result) => {
+                    if (result) {
+                        resolve(user);
+                    } else {
+                        reject({ error: 'User not logged in' });
+                    }
+                });
+            });
+        })
+        .catch(err => Promise.reject(err));
+};
+
 UserSchema.pre('save', function(next) {
     //check if password has been modified. Only then run middleware code.
     //we dont want to hash already hashed password
