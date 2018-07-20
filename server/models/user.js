@@ -50,6 +50,17 @@ UserSchema.methods.generateAuthToken = function() {
     return this.save().then(() => token);
 };
 
+UserSchema.methods.removeToken = function(token) {
+    //$pull operator pulls out the object which match token and removes all its props
+    return this.update({
+        $pull: {
+            tokens: {
+                token
+            }
+        }
+    });
+};
+
 UserSchema.statics.findByToken = function(token) {
     let decoded;
 

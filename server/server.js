@@ -153,6 +153,16 @@ app.post('/users/login', (req, res) => {
         .catch(err => res.status(400).send(err));
 });
 
+//logg out user
+app.delete('/users/me/token', authenticate, (req, res) => {
+    req.user
+        .removeToken(req.token)
+        .then(() => {
+            res.status(200).send();
+        })
+        .catch(err => res.status(400).send());
+});
+
 //listen to the requests
 app.listen(process.env.PORT, () => {
     console.info(`Server is on port ${process.env.PORT}`);
