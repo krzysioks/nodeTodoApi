@@ -229,7 +229,7 @@ describe('GET /users/me', () => {
     });
 });
 
-describe('POST /users', () => {
+describe('POST /users/create', () => {
     it('should create user', done => {
         const email = 'user_test@test.pl';
         const password = 'passwd123!';
@@ -248,12 +248,14 @@ describe('POST /users', () => {
                     return done();
                 }
 
-                UserModel.findOne({ email }).then(user => {
-                    expect(user).toExist();
-                    //after creating user, stored password should be hashed
-                    expect(user.password).toNotBe(password);
-                    done();
-                });
+                UserModel.findOne({ email })
+                    .then(user => {
+                        expect(user).toExist();
+                        //after creating user, stored password should be hashed
+                        expect(user.password).toNotBe(password);
+                        done();
+                    })
+                    .catch(err => done(err));
             });
     });
 
@@ -282,5 +284,85 @@ describe('POST /users', () => {
                 expect(res.body.name).toBe('MongoError');
             })
             .end(done);
+    });
+});
+
+describe('POST /users/login', () => {
+    it('should login user and return auth token', done => {
+        request(app)
+            .post('/users/login')
+            .send({
+                email: users[1].email,
+                password: users[1].password
+            })
+            .expect(200)
+            .expect(res => {
+                expect(res.headers['x-auth']).toBeTruthy();
+            })
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+
+                UserModel.findById(users[1]._id)
+                    .then(user => {
+                        expect(user.tokens[0]).toMatchObject({
+                            access: 'auth',
+                            token: res.headers['x-auth']
+                        });
+                        done();
+                    })
+                    .catch(err => done(err));
+            });
+    });
+    it('should reject invalid login (no user)', done => {
+        const email = 'user_test@test.pl';
+        const password = 'passwd123!';
+        request(app)
+            .post('/users/login')
+            .send({
+                email,
+                password
+            })
+            .expect(400)
+            .expect(res => {
+                expect(res.headers['x-auth']).not.toBeTruthy();
+            })
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+
+                expect(res.body.error).toBe('User not found');
+                done();
+            });
+    });
+
+    it('should reject invalid login (invalid password)', done => {
+        const email = users[1].email;
+        const password = 'passwd123!';
+        request(app)
+            .post('/users/login')
+            .send({
+                email,
+                password
+            })
+            .expect(400)
+            .expect(res => {
+                expect(res.headers['x-auth']).not.toBeTruthy();
+            })
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+
+                UserModel.findById(users[1]._id)
+                    .then(user => {
+                        expect(user.tokens.length).toBe(0);
+                        expect(res.body.error).toBe('User not logged in');
+                        done();
+                    })
+                    .catch(err => done(err));
+            });
     });
 });
