@@ -26,8 +26,8 @@ const isValidId = function(id) {
     return ObjectID.isValid(id);
 };
 
-const findTodoById = function(id) {
-    return Todo.findById(id)
+const findTodoById = function(_id, creatorId) {
+    return Todo.findOne({ _id, creatorId })
         .then(todo => {
             if (!todo) {
                 return { errCode: 404 };

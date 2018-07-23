@@ -12,8 +12,8 @@ const { ObjectID } = require('mongodb');
 //     console.log(doc);
 // });
 
-const removeTodoById = function(id) {
-    return Todo.findByIdAndRemove(id)
+const removeTodoById = function(_id, creatorId) {
+    return Todo.findOneAndRemove({ _id, creatorId })
         .then(doc => {
             if (!doc) {
                 return { errCode: 404 };

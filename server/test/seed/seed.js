@@ -3,23 +3,25 @@ const { Todo } = require('./../../models/todo.js');
 const { UserModel } = require('./../../models/user.js');
 const jwt = require('jsonwebtoken');
 
+const userOneId = new ObjectID();
+const userTwoId = new ObjectID();
+const salt = 'salt123';
+
 const todos = [
     {
         _id: new ObjectID(),
         text: 'Some todo 1',
-        completed: false
+        completed: false,
+        creatorId: userOneId
     },
     {
         _id: new ObjectID(),
         text: 'Some todo 2',
         completed: true,
-        completedAt: new Date().getTime() - 5000
+        completedAt: new Date().getTime() - 5000,
+        creatorId: userTwoId
     }
 ];
-
-const userOneId = new ObjectID();
-const userTwoId = new ObjectID();
-const salt = 'salt123';
 
 const users = [
     {
@@ -36,7 +38,13 @@ const users = [
     {
         _id: userTwoId,
         email: 'testkp2@test.pl',
-        password: 'uPasswd123'
+        password: 'uPasswd123',
+        tokens: [
+            {
+                access: 'auth',
+                token: jwt.sign({ _id: userTwoId, access: 'auth' }, salt).toString()
+            }
+        ]
     }
 ];
 

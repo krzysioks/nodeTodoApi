@@ -16,9 +16,10 @@ const app = express();
 // //handling middleware (parsing post body got from client)
 app.use(bodyParser.json());
 
-app.post('/todos', (req, res) => {
+app.post('/todos', authenticate, (req, res) => {
     const todo = new Todo({
-        text: req.body.text
+        text: req.body.text,
+        creatorId: req.user._id
     });
     todo.save()
         .then(doc => {
@@ -30,8 +31,8 @@ app.post('/todos', (req, res) => {
 });
 
 //handlig get request
-app.get('/todos', (req, res) => {
-    Todo.find().then(
+app.get('/todos', authenticate, (req, res) => {
+    Todo.find({ creatorId: req.user._id }).then(
         todos => {
             res.send({ todos });
         },
@@ -42,13 +43,13 @@ app.get('/todos', (req, res) => {
 });
 
 //GET /todos/123345
-app.get('/todos/:id', (req, res) => {
+app.get('/todos/:id', authenticate, (req, res) => {
     if (!isValidId(req.params.id)) {
         res.status(404).send({ errMsg: 'Provided id is not valid' });
         return;
     }
 
-    findTodoById(req.params.id).then(todo => {
+    findTodoById(req.params.id, req.user._id).then(todo => {
         if (todo.errCode) {
             switch (todo.errCode) {
                 case 400:
@@ -65,13 +66,13 @@ app.get('/todos/:id', (req, res) => {
 });
 
 //DELETE /todos/123345
-app.delete('/todos/:id', (req, res) => {
+app.delete('/todos/:id', authenticate, (req, res) => {
     if (!isValidId(req.params.id)) {
         res.status(404).send({ errMsg: 'Provided id is not valid' });
         return;
     }
 
-    removeTodoById(req.params.id).then(todo => {
+    removeTodoById(req.params.id, req.user._id).then(todo => {
         if (todo.errCode) {
             switch (todo.errCode) {
                 case 400:
@@ -88,7 +89,7 @@ app.delete('/todos/:id', (req, res) => {
 });
 
 //PATCH /todos/123345
-app.patch('/todos/:id', (req, res) => {
+app.patch('/todos/:id', authenticate, (req, res) => {
     //pick takes of req.body provided property names if they exist and create key value pair object
     const body = _.pick(req.body, ['text', 'completed']);
 
@@ -104,7 +105,7 @@ app.patch('/todos/:id', (req, res) => {
         body.completedAt = null;
     }
 
-    Todo.findByIdAndUpdate(req.params.id, { $set: body }, { new: true })
+    Todo.findOneAndUpdate({ _id: req.params.id, creatorId: req.user._id }, { $set: body }, { new: true })
         .then(todo => {
             if (!todo) {
                 return res.status(404).send();
