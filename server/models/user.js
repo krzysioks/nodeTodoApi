@@ -43,7 +43,7 @@ UserSchema.methods.toJSON = function() {
 UserSchema.methods.generateAuthToken = function() {
     //this refers to doc stored in User db.
     const access = 'auth';
-    const token = jwt.sign({ _id: this._id.toHexString(), access }, 'salt123').toString();
+    const token = jwt.sign({ _id: this._id.toHexString(), access }, process.env.JWT_SECRET).toString();
 
     this.tokens = [...this.tokens, { access, token }];
 
@@ -65,7 +65,7 @@ UserSchema.statics.findByToken = function(token) {
     let decoded;
 
     try {
-        decoded = jwt.verify(token, 'salt123');
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
         return Promise.reject();
     }
