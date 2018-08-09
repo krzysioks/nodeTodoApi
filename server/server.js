@@ -16,106 +16,104 @@ const app = express();
 // //handling middleware (parsing post body got from client)
 app.use(bodyParser.json());
 
-app.post('/todos', authenticate, (req, res) => {
-    const todo = new Todo({
-        text: req.body.text,
-        creatorId: req.user._id
-    });
-    todo.save()
-        .then(doc => {
-            res.send(doc);
-        })
-        .catch(err => {
-            res.status(400).send(err);
+app.post('/todos', authenticate, async (req, res) => {
+    try {
+        const todo = new Todo({
+            text: req.body.text,
+            creatorId: req.user._id
         });
+        const doc = await todo.save();
+        res.send(doc);
+    } catch (err) {
+        res.status(400).send(err);
+    }
 });
 
 //handlig get request
-app.get('/todos', authenticate, (req, res) => {
-    Todo.find({ creatorId: req.user._id }).then(
-        todos => {
-            res.send({ todos });
-        },
-        err => {
-            res.status(400).send(err);
-        }
-    );
+app.get('/todos', authenticate, async (req, res) => {
+    try {
+        const todos = await Todo.find({ creatorId: req.user._id });
+        res.send({ todos });
+    } catch (err) {
+        res.status(400).send(err);
+    }
 });
 
 //GET /todos/123345
-app.get('/todos/:id', authenticate, (req, res) => {
+app.get('/todos/:id', authenticate, async (req, res) => {
     if (!isValidId(req.params.id)) {
         res.status(404).send({ errMsg: 'Provided id is not valid' });
         return;
     }
 
-    findTodoById(req.params.id, req.user._id).then(todo => {
-        if (todo.errCode) {
-            switch (todo.errCode) {
-                case 400:
-                    res.status(400).send({ errMsg: 'Error occured while fetching doc from database' });
-                    break;
-                case 404:
-                    res.status(404).send({ errMsg: 'Document not found' });
-                    break;
-            }
-        } else {
-            res.status(200).send(todo);
+    const todo = await findTodoById(req.params.id, req.user._id);
+    if (todo.errCode) {
+        switch (todo.errCode) {
+            case 400:
+                res.status(400).send({ errMsg: 'Error occured while fetching doc from database' });
+                break;
+            case 404:
+                res.status(404).send({ errMsg: 'Document not found' });
+                break;
         }
-    });
+    } else {
+        res.status(200).send(todo);
+    }
 });
 
 //DELETE /todos/123345
-app.delete('/todos/:id', authenticate, (req, res) => {
+app.delete('/todos/:id', authenticate, async (req, res) => {
     if (!isValidId(req.params.id)) {
         res.status(404).send({ errMsg: 'Provided id is not valid' });
         return;
     }
 
-    removeTodoById(req.params.id, req.user._id).then(todo => {
-        if (todo.errCode) {
-            switch (todo.errCode) {
-                case 400:
-                    res.status(400).send({ errMsg: 'Error occured while deleteing doc from database' });
-                    break;
-                case 404:
-                    res.status(404).send({ errMsg: 'Document not found' });
-                    break;
-            }
-        } else {
-            res.status(200).send({ todo });
+    const todo = await removeTodoById(req.params.id, req.user._id);
+    if (todo.errCode) {
+        switch (todo.errCode) {
+            case 400:
+                res.status(400).send({ errMsg: 'Error occured while deleteing doc from database' });
+                break;
+            case 404:
+                res.status(404).send({ errMsg: 'Document not found' });
+                break;
         }
-    });
+    } else {
+        res.status(200).send({ todo });
+    }
 });
 
 //PATCH /todos/123345
-app.patch('/todos/:id', authenticate, (req, res) => {
-    //pick takes of req.body provided property names if they exist and create key value pair object
-    const body = _.pick(req.body, ['text', 'completed']);
+app.patch('/todos/:id', authenticate, async (req, res) => {
+    try {
+        //pick takes of req.body provided property names if they exist and create key value pair object
+        const body = _.pick(req.body, ['text', 'completed']);
 
-    if (!isValidId(req.params.id)) {
-        res.status(404).send({ errMsg: 'Provided id is not valid' });
-        return;
+        if (!isValidId(req.params.id)) {
+            res.status(404).send({ errMsg: 'Provided id is not valid' });
+            return;
+        }
+
+        if (_.isBoolean(body.completed) && body.completed) {
+            body.completedAt = new Date().getTime();
+        } else {
+            body.completed = false;
+            body.completedAt = null;
+        }
+
+        const todo = await Todo.findOneAndUpdate(
+            { _id: req.params.id, creatorId: req.user._id },
+            { $set: body },
+            { new: true }
+        );
+        if (!todo) {
+            return res.status(404).send();
+        }
+
+        res.send({ todo });
+    } catch (err) {
+        res.status(400).send(err);
     }
-
-    if (_.isBoolean(body.completed) && body.completed) {
-        body.completedAt = new Date().getTime();
-    } else {
-        body.completed = false;
-        body.completedAt = null;
-    }
-
-    Todo.findOneAndUpdate({ _id: req.params.id, creatorId: req.user._id }, { $set: body }, { new: true })
-        .then(todo => {
-            if (!todo) {
-                return res.status(404).send();
-            }
-
-            res.send({ todo });
-        })
-        .catch(err => {
-            res.status(400).send(err);
-        });
 });
 
 app.get('/users/me', authenticate, (req, res) => {
@@ -123,45 +121,42 @@ app.get('/users/me', authenticate, (req, res) => {
 });
 
 //POST user
-app.post('/users/create', (req, res) => {
-    //pick takes of req.body provided property names if they exist and create key value pair object
-    const body = _.pick(req.body, ['email', 'password']);
-    const user = new UserModel(body);
-
-    user.save()
-        .then(response => {
-            //since this is public route (adding user) -> authentication is not necessary.
-            //here creating the auth token for newly added user
-            return response.generateAuthToken();
-        })
-        .then(token => {
-            res.header('x-auth', token).send(user);
-        })
-        .catch(err => res.status(400).send(err));
+app.post('/users/create', async (req, res) => {
+    try {
+        //pick takes of req.body provided property names if they exist and create key value pair object
+        const body = _.pick(req.body, ['email', 'password']);
+        const user = new UserModel(body);
+        const response = await user.save();
+        //since this is public route (adding user) -> authentication is not necessary.
+        //here creating the auth token for newly added user
+        const token = await response.generateAuthToken();
+        res.header('x-auth', token).send(user);
+    } catch (err) {
+        res.status(400).send(err);
+    }
 });
 
 //POST /users/login
-app.post('/users/login', (req, res) => {
-    const body = _.pick(req.body, ['email', 'password']);
-
-    UserModel.findByCredentials(body.email, body.password)
-        .then(user => {
-            return user.generateAuthToken().then(token => {
-                //if user authenticated successfully -> generate token and add to x-auth header props
-                res.header('x-auth', token).send(user);
-            });
-        })
-        .catch(err => res.status(400).send(err));
+app.post('/users/login', async (req, res) => {
+    try {
+        const body = _.pick(req.body, ['email', 'password']);
+        const user = await UserModel.findByCredentials(body.email, body.password);
+        const token = await user.generateAuthToken();
+        //if user authenticated successfully -> generate token and add to x-auth header props
+        res.header('x-auth', token).send(user);
+    } catch (err) {
+        res.status(400).send(err);
+    }
 });
 
 //logg out user
-app.delete('/users/me/token', authenticate, (req, res) => {
-    req.user
-        .removeToken(req.token)
-        .then(() => {
-            res.status(200).send();
-        })
-        .catch(err => res.status(400).send());
+app.delete('/users/me/token', authenticate, async (req, res) => {
+    try {
+        await req.user.removeToken(req.token);
+        res.status(200).send();
+    } catch (err) {
+        res.status(400).send();
+    }
 });
 
 //listen to the requests
